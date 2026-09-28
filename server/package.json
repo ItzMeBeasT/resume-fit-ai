@@ -12,7 +12,17 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "express": "^5.2.1"
+    "@anthropic-ai/sdk": "^0.128.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "mongoose": "^9.10.2",
+    "multer": "^2.4.0",
+    "pdf-parse": "^2.4.5",
+    "zod": "^4.6.5"
   }
 }

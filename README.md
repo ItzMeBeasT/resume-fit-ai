@@ -62,17 +62,14 @@ LLM apps are easy to demo and hard to make reliable. The interesting part of thi
 
 ```mermaid
 flowchart LR
-    U([User]) -->|PDF + job description| C[React + Vite client]
-    C -->|multipart POST /api/analyze| A[Express API]
-    A --> RL{Rate limiter<br/>5 / 10 min}
-    RL --> V[Validate<br/>size, MIME, %PDF- bytes,<br/>JD length]
-    V --> P[pdf-parse<br/>text extracted in memory]
-    P --> G[Gemini<br/>structured JSON output]
-    G --> Z[Zod validation<br/>clamp + round score]
-    Z --> DB[(MongoDB<br/>score + feedback only)]
-    Z -->|score, verdict, skills, fixes| C
-    C -->|GET /api/results| A
+    A[React client] --> B[Express API]
+    B --> C[Gemini]
+    B --> D[(MongoDB)]
 ```
+
+1. The React client sends the PDF and job description to the Express API.
+2. The API validates the upload, extracts the resume text, and asks Gemini to compare it with the job description.
+3. The response is checked, saved to MongoDB, and returned to the client.
 
 ## 📡 API
 
@@ -200,6 +197,7 @@ I'd rather list these than have you find them:
 - **Text-based PDFs only.** Scanned resumes need OCR, which isn't included.
 - **History is per browser** (an anonymous ID in `localStorage`), not tied to an account.
 - **Resume and job-description text is processed by Google's Gemini API,** so don't upload anything you wouldn't send to a third-party service.
+  
 
 ## 👤 Author
 

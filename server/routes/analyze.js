@@ -1,11 +1,8 @@
 import { Router } from 'express'
 import multer from 'multer'
 import analyzeLimiter from '../middleware/analyzeLimiter.js'
-import { askClaude } from '../lib/askClaude.js'
-import { costInr } from '../lib/cost.js'
+import { askGemini } from '../lib/askGemini.js'
 import { readResume } from '../lib/readResume.js'
-import { ROLES } from '../lib/roles.js'
-import { spentTodayInr } from '../lib/spend.js'
 import { verdictFor } from '../lib/verdict.js'
 import Result from '../models/Result.js'
 
@@ -17,7 +14,8 @@ const upload = multer({
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 router.post('/api/analyze', analyzeLimiter, upload.single('resume'), async (request, response) => {
-  const targetRole = request.body?.targetRole
+  const rawJobDescription = request.body?.jobDescription
+  const jobDescription = typeof rawJobDescription === 'string' ? rawJobDescription.trim() : ''
   const userId = request.body?.userId
 
   if (typeof userId !== 'string' || !UUID_PATTERN.test(userId)) {
@@ -26,12 +24,16 @@ router.post('/api/analyze', analyzeLimiter, upload.single('resume'), async (requ
     })
   }
 
-  if (!request.file || request.file.mimetype !== 'application/pdf') {
-    return response.status(400).json({ error: 'Upload your resume as a PDF.' })
+  if (!request.file || request.file.mimetype !== 'application/pdf' || !request.file.buffer.subarray(0, 5).equals(Buffer.from('%PDF-'))) {
+    return response.status(400).json({ error: 'Please upload a valid PDF under 4 MiB.' })
   }
 
-  if (!Object.hasOwn(ROLES, targetRole)) {
-    return response.status(400).json({ error: 'Pick a role from the list.' })
+  if (typeof jobDescription !== 'string' || jobDescription.length < 30) {
+    return response.status(400).json({ error: 'Paste a job description of at least 30 characters before comparing.' })
+  }
+
+  if (jobDescription.length > 20_000) {
+    return response.status(413).json({ error: 'The job description must be 20,000 characters or fewer.' })
   }
 
   let text
@@ -55,61 +57,46 @@ router.post('/api/analyze', analyzeLimiter, upload.single('resume'), async (requ
     })
   }
 
-  if (await spentTodayInr() >= Number(process.env.DAILY_CAP_INR)) {
-    console.log('[Cost] daily cap reached')
-    return response.status(503).json({
-      error: "We've hit today's AI budget. Please try again tomorrow.",
+  let analysis = null
+  let analysisError = null
+  const startedAt = Date.now()
+
+  try {
+    const result = await askGemini(text, jobDescription)
+    analysis = result.analysis
+  } catch (error) {
+    analysisError = error
+    console.error(`[AI] Gemini error: ${error.message}`)
+  }
+
+  if (analysisError) {
+    return response.status(500).json({
+      error: "We couldn't complete the analysis. Please try again.",
     })
   }
 
-  const startedAt = Date.now()
-  let analysis = null
-  let usage
-  let analysisError
-  try {
-    const result = await askClaude(text, targetRole)
-    analysis = result.analysis
-    usage = result.usage
-  } catch (error) {
-    analysisError = error
-    usage = error.usage
-  }
-
-  const requestCostInr = costInr({
-    inputTokens: usage?.input_tokens ?? 0,
-    outputTokens: usage?.output_tokens ?? 0,
-  }, process.env.CLAUDE_MODEL)
+  const score = analysis.score
+  const verdict = verdictFor(score)
 
   await Result.create({
     userId,
-    targetRole,
-    score: analysis?.score ?? null,
-    verdict: analysis ? verdictFor(analysis.score) : null,
-    skillsFound: analysis?.skillsFound ?? [],
-    skillsMissing: analysis?.skillsMissing ?? [],
-    topFixes: analysis?.topFixes ?? [],
+    score,
+    verdict,
+    skillsFound: analysis.skillsFound,
+    skillsMissing: analysis.skillsMissing,
+    topFixes: analysis.topFixes,
     fallback: false,
-    inputTokens: usage?.input_tokens ?? 0,
-    outputTokens: usage?.output_tokens ?? 0,
-    costInr: requestCostInr,
   })
 
-  const totalSpendInr = await spentTodayInr()
-  console.log(`[Cost] ₹${requestCostInr.toFixed(4)} for this request, ₹${totalSpendInr.toFixed(4)} today`)
-
-  if (analysisError) {
-    console.error(`[AI] analysis failed for ${targetRole}: ${analysisError.message}`)
-    throw analysisError
-  }
-
-  console.log(`[AI] analysed ${text.length} chars for ${targetRole} in ${Date.now() - startedAt} ms`)
+  console.log(`[AI] analysed ${text.length} chars in ${Date.now() - startedAt} ms`)
 
   return response.json({
-    targetRole,
-    ...analysis,
-    verdict: verdictFor(analysis.score),
+    score,
+    verdict,
+    skillsFound: analysis.skillsFound,
+    skillsMissing: analysis.skillsMissing,
+    topFixes: analysis.topFixes,
     fallback: false,
-    costInr: requestCostInr,
   })
 })
 

@@ -2,7 +2,7 @@ import multer from 'multer'
 
 export function handleErrors(error, _request, response, _next) {
   if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
-    return response.status(413).json({ error: 'Keep the PDF under 4 MB.' })
+    return response.status(413).json({ error: 'Please upload a valid PDF under 4 MiB.' })
   }
 
   console.error(`[Server] request failed: ${error.message}`)

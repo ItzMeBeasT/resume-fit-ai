@@ -1,15 +1,25 @@
-# resume-analyzer
+# resume-fit-ai
 
-An AI resume analyzer for final-year students applying for their first developer job.
+AI-powered resume analyzer that compares resumes with job descriptions to generate match scores, skill gaps, and actionable improvements using Gemini.
 
-## How to run
+Compare a resume PDF with a real job description. The app returns a match score, strengths, gaps, and three practical improvements.
 
-### Server
-1. Open a terminal in `server/`.
-2. Copy `.env.example` to `.env` (already created for local development).
-3. Run `npm install` once, then `npm run dev`.
+## Requirements
 
-### Client
-1. Open a second terminal in `client/`.
-2. Run `npm install` once, then `npm run dev`.
-3. Visit http://localhost:5180.
+- Node.js 22.12 or newer
+- MongoDB connection string
+- Gemini API key
+
+## Run locally
+
+1. In `server/`, copy `.env.example` to `.env` and set `MONGODB_URI`, `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.5-flash-lite`, and `CLIENT_ORIGIN=http://localhost:5180`.
+2. Install server dependencies with `npm ci`, then start the API with `npm run dev` (port 4000).
+3. In another terminal, run `npm ci` in `client/`, then start Vite with `npm run dev` (port 5180).
+4. Open http://localhost:5180.
+
+The client sends PDF uploads and job descriptions to the Express API via the local `/api` proxy. The API extracts resume text in memory, sends both text inputs to Gemini, validates its response, and stores analysis results in MongoDB for recent-history display.
+
+## Checks
+
+- Client: `npm run lint` and `npm run build`
+- Server: `npm test`

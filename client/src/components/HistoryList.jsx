@@ -10,7 +10,6 @@ function formatDate(value) {
 }
 
 function getResultLabel(result) {
-  if (result.fallback) return 'skill match'
   if (result.score === null || result.score === undefined) return 'Analysis failed'
   return `${result.score}/100`
 }
@@ -59,7 +58,7 @@ function HistoryList({ userId, refreshKey }) {
           {results.map((result, index) => (
             <li className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0" key={`${result.createdAt}-${index}`}>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{result.targetRole}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">Resume comparison</p>
                 <time className="mt-1 block text-xs text-slate-500" dateTime={result.createdAt}>
                   {formatDate(result.createdAt)}
                 </time>

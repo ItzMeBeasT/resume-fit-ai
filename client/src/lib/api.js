@@ -1,10 +1,10 @@
 const CONNECTION_ERROR = 'Could not reach the server. Check your connection and try again.'
 const API = import.meta.env.VITE_API_URL ?? ''
 
-export async function analyzeResume(file, targetRole, userId) {
+export async function analyzeResume(file, jobDescription, userId) {
   const formData = new FormData()
   formData.append('resume', file)
-  formData.append('targetRole', targetRole)
+  formData.append('jobDescription', jobDescription)
   formData.append('userId', userId)
 
   let response
@@ -20,7 +20,7 @@ export async function analyzeResume(file, targetRole, userId) {
   }
 
   if (!response.ok) {
-    throw new Error(data.error)
+    throw new Error(data.error ?? 'We couldn’t complete the analysis. Please try again.')
   }
 
   return data

@@ -15,7 +15,7 @@ router.get('/api/results', async (request, response) => {
   const results = await Result.find({ userId })
     .sort({ createdAt: -1 })
     .limit(10)
-    .select({ _id: 0, targetRole: 1, score: 1, fallback: 1, createdAt: 1 })
+    .select({ _id: 0, score: 1, fallback: 1, createdAt: 1 })
     .lean()
 
   return response.json({ results })

@@ -2,11 +2,8 @@ import express from 'express'
 import cors from 'cors'
 import analyzeRouter from './routes/analyze.js'
 import { handleErrors } from './middleware/errors.js'
-import { checkCostConfig } from './lib/cost.js'
 import { connectDb } from './db.js'
 import resultsRouter from './routes/results.js'
-
-checkCostConfig()
 
 const app = express()
 const port = process.env.PORT || 4000
